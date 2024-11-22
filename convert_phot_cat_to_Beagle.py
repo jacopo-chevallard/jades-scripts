@@ -148,14 +148,40 @@ def main():
 
     phot_cat = {}
 
-    output_cat = defaultdict(list)
+    # Columns in the output catalogue
+    cols = {
+        ColumnNames.NIRCam_ID: "20a",
+        ColumnNames.NIRSpec_ID: "20a",
+        ColumnNames.RA[ColumnNames.name]: float,
+        ColumnNames.DEC[ColumnNames.name]: float,
+        ColumnNames.SIZE[ColumnNames.name]: float,
+    }
+
+    for filter in DefaultFilters.hst_jwst:
+        cols[filter[DefaultFilters.label]] = float
+        cols[filter[DefaultFilters.label] + "_" + DefaultFilters.err] = float
+
+    for filter in DefaultFilters.extra:
+        cols[filter] = float
+        cols[filter + "_" + DefaultFilters.err] = float
+
+    # Initialize all columns as numpy arrays of length equal to the number of rows in the input catalogue and filled with -99
+    output_cat = {
+        name: np.full(len(input_cat), -99, dtype=dtype) for name, dtype in cols.items()
+    }
 
     for i, obj in enumerate(input_cat):
         nircam_id = obj[ColumnNames.NIRCam_ID]
         nirspec_id = obj[ColumnNames.NIRSpec_ID]
 
-        if not nircam_id:
+        output_cat[ColumnNames.NIRSpec_ID][i] = nirspec_id
+
+        if not nircam_id.strip():
             continue
+        else:
+            nircam_id = int(nircam_id)
+
+        output_cat[ColumnNames.NIRCam_ID][i] = nircam_id
 
         tier = get_tier(obj[ColumnNames.TIER])
 
@@ -186,13 +212,10 @@ def main():
             ColumnNames.DEC[ColumnNames.name],
             nircam_id,
         )
-        print(nircam_id, size)
 
-        output_cat[ColumnNames.NIRCam_ID].append(nircam_id)
-        output_cat[ColumnNames.NIRSpec_ID].append(nirspec_id)
-        output_cat[ColumnNames.RA[ColumnNames.name]].append(ra)
-        output_cat[ColumnNames.DEC[ColumnNames.name]].append(dec)
-        output_cat[ColumnNames.SIZE[ColumnNames.name]].append(size)
+        output_cat[ColumnNames.RA[ColumnNames.name]][i] = ra
+        output_cat[ColumnNames.DEC[ColumnNames.name]][i] = dec
+        output_cat[ColumnNames.SIZE[ColumnNames.name]][i] = size
 
         row = np.where(
             phot_cat[tier][ColumnNames.FLAG].data[ColumnNames.ID] == nircam_id
@@ -217,19 +240,19 @@ def main():
                 + ColumnNames.error_suffix
             ][row]
             if flag == 0 and phot_val != 0:
-                output_cat[filter[DefaultFilters.label]].append(phot_val)
-                output_cat[
-                    filter[DefaultFilters.label] + "_" + DefaultFilters.err
-                ].append(phot_err)
+                output_cat[filter[DefaultFilters.label]][i] = phot_val
+                output_cat[filter[DefaultFilters.label] + "_" + DefaultFilters.err][
+                    i
+                ] = phot_err
             else:
-                output_cat[filter[DefaultFilters.label]].append(-99)
-                output_cat[
-                    filter[DefaultFilters.label] + "_" + DefaultFilters.err
-                ].append(-99)
+                output_cat[filter[DefaultFilters.label]][i] = -99
+                output_cat[filter[DefaultFilters.label] + "_" + DefaultFilters.err][
+                    i
+                ] = -99
 
         for filter in DefaultFilters.extra:
-            output_cat[filter].append(-99)
-            output_cat[filter + "_" + DefaultFilters.err].append(-99)
+            output_cat[filter][i] = -99
+            output_cat[filter + "_" + DefaultFilters.err][i] = -99
 
     output_table = Table(output_cat)
 
