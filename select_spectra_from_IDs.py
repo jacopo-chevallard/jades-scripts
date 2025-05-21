@@ -267,6 +267,9 @@ def _search_and_copy_files(parent_folder: str, ids: List[str], suffixes: List[st
             best_file = _find_best_file(matching_files)
             if best_file:
                 _copy_file_overwrite(best_file, output_folder)
+                if "_1D.fits" in best_file:
+                    best_file_2d = best_file.replace("_1D.fits", "_2D.fits")
+                    _copy_file_overwrite(best_file_2d, output_folder)
                 _log_copy(best_file, output_folder)
                 found = True
         
