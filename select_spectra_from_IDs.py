@@ -210,10 +210,17 @@ def _copy_file_overwrite(src: str, dst: str) -> None:
         except OSError as e:
             # Raise an exception if there is an error while removing the file
             raise OSError(f"Error while removing {dst_}: {e}")
+
+    if not os.path.exists(src) and '_2D.fits' in src:
+        logging.warning(f"Source file {src} does not exist. Skipping copy of 2D file.")
+        return
     
-    # Now, copy the file to the destination
-    # Use copy2 to also copy the metadata of the file
-    shutil.copy2(src, dst)  # type: ignore
+    try:
+        shutil.copy2(src, dst)  # type: ignore
+    except Exception as e:
+        # Raise an exception if there is an error while copying the file
+        raise Exception(f"Error while copying {src} to {dst}: {e}")
+    
 
 def _log_copy(src: str, dst: str) -> None:
     """
